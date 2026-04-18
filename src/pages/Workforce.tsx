@@ -78,12 +78,22 @@ function DepartmentSection({ dept }: { dept: Department }) {
     ["active", "running", "live", "processing"].includes(a.status),
   ).length;
 
+  const accentStyles: Record<Department["accent"], { wrap: string; icon: string }> = {
+    electric: { wrap: "bg-electric/10 ring-electric/30",       icon: "text-electric" },
+    violet:   { wrap: "bg-violet/10 ring-violet/30",           icon: "text-violet" },
+    emerald:  { wrap: "bg-success/10 ring-success/30",         icon: "text-success" },
+    amber:    { wrap: "bg-warning/10 ring-warning/30",         icon: "text-warning" },
+    sky:      { wrap: "bg-info/10 ring-info/30",               icon: "text-info" },
+    rose:     { wrap: "bg-destructive/10 ring-destructive/30", icon: "text-destructive" },
+  };
+  const styles = accentStyles[dept.accent];
+
   return (
     <section className="glass-card rounded-xl p-5">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-3">
-          <div className={`h-9 w-9 rounded-lg grid place-items-center ring-1 bg-${dept.accent}/10 ring-${dept.accent}/30`}>
-            <Icon className={`h-4 w-4 text-${dept.accent}`} />
+          <div className={`h-9 w-9 rounded-lg grid place-items-center ring-1 ${styles.wrap}`}>
+            <Icon className={`h-4 w-4 ${styles.icon}`} />
           </div>
           <div>
             <h2 className="text-base font-semibold tracking-tight text-foreground">{dept.name}</h2>
