@@ -1,6 +1,6 @@
 import { NavLink } from "@/components/NavLink";
 import {
-  LayoutDashboard, Bot, Send, Brain, TrendingUp, Radio, Terminal, Settings,
+  LayoutDashboard, Bot, Send, Brain, Radio, Terminal, Settings,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -13,7 +13,7 @@ const nav = [
   { title: "AI Workforce",   url: "/workforce", icon: Bot },
   { title: "Dispatch",       url: "/dispatch",  icon: Send },
   { title: "Memory",         url: "/memory",    icon: Brain },
-  { title: "Growth Engine",  url: "/growth",    icon: TrendingUp },
+  
   { title: "Signal Engine",  url: "/signal",    icon: Radio },
   { title: "Command Center", url: "/command",   icon: Terminal },
 ];
