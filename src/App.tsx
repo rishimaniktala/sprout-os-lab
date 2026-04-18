@@ -4,10 +4,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
-import Agents from "./pages/Agents.tsx";
-import Projects from "./pages/Projects.tsx";
-import InboxPage from "./pages/InboxPage.tsx";
-import Copilot from "./pages/Copilot.tsx";
+import Workforce from "./pages/Workforce.tsx";
+import Meetings from "./pages/Meetings.tsx";
+import Portfolio from "./pages/Portfolio.tsx";
+import Memory from "./pages/Memory.tsx";
+import Chat from "./pages/Chat.tsx";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -20,10 +21,11 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/agents" element={<Agents />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/inbox" element={<InboxPage />} />
-          <Route path="/copilot" element={<Copilot />} />
+          <Route path="/workforce" element={<Workforce />} />
+          <Route path="/meetings" element={<Meetings />} />
+          <Route path="/portfolio" element={<Portfolio />} />
+          <Route path="/memory" element={<Memory />} />
+          <Route path="/chat" element={<Chat />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

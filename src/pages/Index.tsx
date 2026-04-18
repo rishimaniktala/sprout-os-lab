@@ -1,189 +1,235 @@
 import { OSLayout } from "@/components/os/OSLayout";
-import { StatusBadge } from "@/components/os/StatusBadge";
-import { agents, kpis, metricSeries, inbox } from "@/lib/mock-data";
-import { ArrowUpRight, TrendingUp, Bot, DollarSign, CheckCircle2, AlertCircle } from "lucide-react";
+import { ModelAvatar, modelAccent } from "@/components/os/ModelAvatar";
+import {
+  founder, alerts, priorities, briefingChips, aiModels,
+} from "@/lib/mock-data";
+import {
+  ArrowUp, ArrowDown, Sparkles, Activity, Wallet, Zap, Heart, AlertTriangle,
+  CheckCircle2, Clock, ArrowRight, TrendingUp,
+} from "lucide-react";
+import { useState } from "react";
 
-const formatUsd = (n: number) => `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+const fmtEur = (n: number) => `€${n.toLocaleString("en-GB")}`;
 
-const Stat = ({ label, value, delta, icon: Icon, accent }: { label: string; value: string; delta: string; icon: any; accent?: boolean }) => (
-  <div className="relative rounded-lg border border-border bg-surface p-4 overflow-hidden group hover:bg-surface-elevated transition-colors">
-    {accent && <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-accent/10 blur-2xl" />}
-    <div className="flex items-center justify-between">
-      <span className="text-[11px] uppercase tracking-wider text-muted-foreground mono">{label}</span>
-      <Icon className="h-3.5 w-3.5 text-muted-foreground group-hover:text-accent transition-colors" />
-    </div>
-    <div className="mt-3 flex items-baseline gap-2">
-      <span className="text-2xl font-semibold text-foreground tracking-tight">{value}</span>
-      <span className="text-[11px] mono text-success flex items-center gap-0.5">
-        <TrendingUp className="h-3 w-3" />{delta}
-      </span>
-    </div>
-  </div>
-);
+const toneIcon = {
+  warning: AlertTriangle,
+  success: TrendingUp,
+  destructive: AlertTriangle,
+} as const;
+const toneClass = {
+  warning: "text-warning",
+  success: "text-success",
+  destructive: "text-destructive",
+} as const;
 
-// Inline SVG sparkline for tasks
-const Sparkline = () => {
-  const max = Math.max(...metricSeries.map(m => m.tasks));
-  const points = metricSeries.map((m, i) => {
-    const x = (i / (metricSeries.length - 1)) * 100;
-    const y = 100 - (m.tasks / max) * 100;
-    return `${x},${y}`;
-  }).join(" ");
-  return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="h-full w-full">
-      <defs>
-        <linearGradient id="sg" x1="0" x2="0" y1="0" y2="1">
-          <stop offset="0%" stopColor="hsl(var(--accent))" stopOpacity="0.4" />
-          <stop offset="100%" stopColor="hsl(var(--accent))" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon points={`0,100 ${points} 100,100`} fill="url(#sg)" />
-      <polyline points={points} fill="none" stroke="hsl(var(--accent))" strokeWidth="0.6" vectorEffect="non-scaling-stroke" />
-    </svg>
-  );
-};
-
-const Dashboard = () => {
-  const topAgents = [...agents].sort((a, b) => b.tasksCompleted - a.tasksCompleted).slice(0, 5);
-  const urgentInbox = inbox.filter(i => i.severity === "high");
+const Index = () => {
+  const [prompt, setPrompt] = useState("");
 
   return (
     <OSLayout>
-      <div className="scanline-bg">
-        <div className="px-6 py-8 max-w-[1400px] mx-auto animate-fade-in">
-          <div className="flex items-end justify-between flex-wrap gap-4">
-            <div>
-              <div className="text-[11px] mono uppercase tracking-[0.18em] text-muted-foreground">
-                {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
-              </div>
-              <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground text-balance">
-                Good morning, Jordan.
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Your fleet of <span className="text-foreground font-medium">{agents.length} agents</span> ran{" "}
-                <span className="text-foreground font-medium">{kpis.totalTasks24h.toLocaleString()} tasks</span> in the last 24h.
-              </p>
+      <div className="px-6 py-8 max-w-[1400px] mx-auto animate-fade-in">
+        {/* Hero */}
+        <header className="mb-8">
+          <div className="flex items-center gap-2 text-[11px] mono uppercase tracking-[0.18em] text-muted-foreground">
+            <Sparkles className="h-3 w-3 text-electric" />
+            Daily Briefing · {new Date().toLocaleDateString("en-GB", { weekday: "long", month: "short", day: "numeric" })}
+          </div>
+          <h1 className="mt-3 text-[34px] leading-[1.05] font-semibold tracking-tight text-foreground">
+            Good morning, {founder.name}.
+          </h1>
+          <p className="mt-2 text-[15px] text-muted-foreground max-w-2xl">
+            Your AI workforce completed{" "}
+            <span className="text-foreground font-medium">{founder.briefing.completedOvernight} tasks</span>{" "}
+            overnight. <span className="text-success">{founder.briefing.growthOpps} growth opportunities</span> found,{" "}
+            <span className="text-destructive">{founder.briefing.churnRisks} churn risk</span> detected,{" "}
+            <span className="text-foreground">{founder.briefing.meetingsPrepared} meetings</span> prepared automatically.
+          </p>
+
+          {/* Prompt */}
+          <form onSubmit={(e) => e.preventDefault()} className="mt-6 relative max-w-3xl">
+            <div className="glass-card-strong rounded-xl p-1.5 flex items-center gap-2">
+              <input
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="What should the AI team research today?"
+                className="flex-1 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
+              />
+              <button className="h-9 px-3 rounded-lg gradient-accent text-accent-foreground text-xs font-medium flex items-center gap-1.5 hover:opacity-90 transition-opacity">
+                Dispatch <ArrowRight className="h-3.5 w-3.5" />
+              </button>
             </div>
-            <div className="flex items-center gap-2">
-              <button className="h-8 px-3 rounded-md text-xs border border-border bg-surface hover:bg-surface-hover text-foreground transition-colors">
-                Export
-              </button>
-              <button className="h-8 px-3 rounded-md text-xs gradient-accent text-accent-foreground font-medium hover:opacity-90 transition-opacity inline-flex items-center gap-1.5">
-                Deploy agent <ArrowUpRight className="h-3 w-3" />
-              </button>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {briefingChips.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setPrompt(c)}
+                  className="text-[11px] mono px-2.5 py-1 rounded-full border border-border bg-surface text-muted-foreground hover:text-foreground hover:bg-surface-hover hover:border-border-strong transition-colors"
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
+          </form>
+        </header>
+
+        {/* KPI grid */}
+        <section className="grid grid-cols-12 gap-4">
+          <KPICard className="col-span-12 md:col-span-3" icon={Heart} label="Startup Health" value={`${founder.health}`} suffix="/100"
+            footer={<HealthBar value={founder.health} />} />
+          <KPICard className="col-span-12 md:col-span-3" icon={Activity} label="MRR" value={fmtEur(founder.mrr)}
+            footer={<Delta value={founder.mrrGrowth} suffix="% MoM" />} />
+          <KPICard className="col-span-6 md:col-span-3" icon={Clock} label="Runway" value={`${founder.runwayMonths}`} suffix=" months"
+            footer={<span className="text-[11px] text-muted-foreground mono">at current burn · €38k/mo</span>} />
+          <KPICard className="col-span-6 md:col-span-3" icon={Wallet} label="AI Spend Today" value={`€${founder.spendToday.toFixed(2)}`}
+            footer={<span className="text-[11px] text-success mono">saved {founder.spendSavedPct}% via multi-model routing</span>} />
+
+          {/* Velocity */}
+          <div className="col-span-12 md:col-span-4 glass-card rounded-xl p-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[11px] mono uppercase tracking-wider text-muted-foreground">
+                <Zap className="h-3.5 w-3.5" /> Execution Velocity
+              </div>
+              <span className="text-[10px] mono text-muted-foreground">this week</span>
+            </div>
+            <div className="mt-4 flex items-end justify-between">
+              <div>
+                <div className="text-3xl font-semibold tracking-tight">{founder.velocityWeek}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">tasks completed</div>
+              </div>
+              <Sparkline />
             </div>
           </div>
 
-          {/* KPIs */}
-          <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Stat label="Active agents" value={String(kpis.activeAgents)} delta="+2" icon={Bot} accent />
-            <Stat label="Tasks (24h)" value={kpis.totalTasks24h.toLocaleString()} delta="+12.4%" icon={CheckCircle2} />
-            <Stat label="Spend today" value={formatUsd(kpis.spendToday)} delta="-3.1%" icon={DollarSign} />
-            <Stat label="Success rate" value={`${kpis.successRate}%`} delta="+0.8%" icon={TrendingUp} />
-          </div>
-
-          {/* Main grid */}
-          <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-3">
-            {/* Activity chart */}
-            <section className="lg:col-span-2 rounded-lg border border-border bg-surface p-5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-sm font-semibold text-foreground">Fleet activity</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">Tasks per hour · last 24h</p>
-                </div>
-                <div className="flex items-center gap-1 rounded-md border border-border bg-background p-0.5">
-                  {["1h", "24h", "7d", "30d"].map((p, i) => (
-                    <button key={p} className={`px-2 py-0.5 text-[11px] mono rounded ${i === 1 ? "bg-surface-elevated text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-                      {p}
-                    </button>
-                  ))}
-                </div>
+          {/* Alerts */}
+          <div className="col-span-12 md:col-span-4 glass-card rounded-xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 text-[11px] mono uppercase tracking-wider text-muted-foreground">
+                <AlertTriangle className="h-3.5 w-3.5" /> Alerts
               </div>
-              <div className="mt-4 h-48 -mx-1">
-                <Sparkline />
-              </div>
-              <div className="mt-3 flex items-center justify-between text-[10px] mono text-muted-foreground">
-                {metricSeries.filter((_, i) => i % 4 === 0).map(m => <span key={m.hour}>{m.hour}</span>)}
-              </div>
-            </section>
-
-            {/* Inbox */}
-            <section className="rounded-lg border border-border bg-surface p-5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-foreground">Decisions needed</h2>
-                <span className="text-[10px] mono uppercase tracking-wider text-destructive flex items-center gap-1">
-                  <AlertCircle className="h-3 w-3" />{urgentInbox.length} urgent
-                </span>
-              </div>
-              <ul className="mt-3 space-y-1.5">
-                {inbox.slice(0, 4).map(item => (
-                  <li key={item.id} className="group rounded-md border border-border/60 bg-background hover:bg-surface-hover hover:border-border transition-colors p-3 cursor-pointer">
-                    <div className="flex items-start gap-2">
-                      <span className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${item.severity === "high" ? "bg-destructive" : item.severity === "medium" ? "bg-warning" : "bg-info"}`} />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span className="text-xs font-medium text-foreground truncate">{item.title}</span>
-                          <span className="text-[10px] mono text-muted-foreground shrink-0">{item.ts}</span>
-                        </div>
-                        <p className="mt-0.5 text-[11px] text-muted-foreground line-clamp-1">{item.detail}</p>
-                        <div className="mt-1 text-[10px] mono uppercase tracking-wider text-muted-foreground/70">from {item.agent}</div>
-                      </div>
-                    </div>
+              <span className="text-[10px] mono text-muted-foreground">{alerts.length} signals</span>
+            </div>
+            <ul className="space-y-2.5">
+              {alerts.map((a) => {
+                const Icon = toneIcon[a.severity];
+                return (
+                  <li key={a.id} className="flex items-start gap-2.5 text-xs">
+                    <Icon className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${toneClass[a.severity]}`} />
+                    <span className="text-foreground/90 leading-relaxed">{a.text}</span>
                   </li>
-                ))}
-              </ul>
-            </section>
+                );
+              })}
+            </ul>
           </div>
 
-          {/* Top agents table */}
-          <section className="mt-6 rounded-lg border border-border bg-surface overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <h2 className="text-sm font-semibold text-foreground">Top performing agents</h2>
-              <a href="/agents" className="text-[11px] mono text-accent hover:text-accent-glow inline-flex items-center gap-1">
-                View all <ArrowUpRight className="h-3 w-3" />
-              </a>
+          {/* Priorities */}
+          <div className="col-span-12 md:col-span-4 glass-card rounded-xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 text-[11px] mono uppercase tracking-wider text-muted-foreground">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Today's Priorities
+              </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-[10px] mono uppercase tracking-wider text-muted-foreground border-b border-border">
-                    <th className="text-left font-normal px-5 py-2.5">Agent</th>
-                    <th className="text-left font-normal px-3 py-2.5">Status</th>
-                    <th className="text-left font-normal px-3 py-2.5">Model</th>
-                    <th className="text-right font-normal px-3 py-2.5">Tasks</th>
-                    <th className="text-right font-normal px-3 py-2.5">Success</th>
-                    <th className="text-right font-normal px-5 py-2.5">Cost / day</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topAgents.map(a => (
-                    <tr key={a.id} className="border-b border-border/50 last:border-0 hover:bg-surface-hover transition-colors">
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-7 w-7 rounded-md bg-gradient-to-br from-accent/30 to-accent-glow/20 grid place-items-center text-[11px] font-semibold text-foreground">
-                            {a.name[0]}
-                          </div>
-                          <div className="leading-tight">
-                            <div className="text-xs font-medium text-foreground">{a.name}</div>
-                            <div className="text-[10px] text-muted-foreground">{a.role}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3"><StatusBadge status={a.status} /></td>
-                      <td className="px-3 py-3"><span className="text-[11px] mono text-muted-foreground">{a.model}</span></td>
-                      <td className="px-3 py-3 text-right text-xs text-foreground mono">{a.tasksCompleted.toLocaleString()}</td>
-                      <td className="px-3 py-3 text-right text-xs text-foreground mono">{a.successRate}%</td>
-                      <td className="px-5 py-3 text-right text-xs text-foreground mono">${a.costToday.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <ul className="space-y-2">
+              {priorities.map((p) => (
+                <li key={p.id} className="flex items-center gap-2.5 rounded-md border border-border/60 bg-surface/60 px-2.5 py-2">
+                  <input type="checkbox" className="h-3.5 w-3.5 rounded border-border bg-surface accent-electric" />
+                  <span className="text-xs text-foreground flex-1 truncate">{p.text}</span>
+                  <ModelAvatar name={p.owner} accent={modelAccent(p.owner)} size="sm" />
+                  <span className="text-[10px] mono text-muted-foreground w-12 text-right">{p.due}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* AI workforce strip */}
+          <div className="col-span-12 glass-card rounded-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-[11px] mono uppercase tracking-wider text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5" /> AI Workforce · live
+              </div>
+              <a href="/workforce" className="text-[11px] text-electric hover:underline">Open control center →</a>
             </div>
-          </section>
-        </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              {aiModels.map((m) => (
+                <div key={m.id} className="rounded-lg border border-border bg-surface/60 p-3 hover:bg-surface-hover transition-colors">
+                  <div className="flex items-center gap-2">
+                    <ModelAvatar name={m.name} accent={m.accent} size="sm" />
+                    <div className="min-w-0">
+                      <div className="text-xs font-medium text-foreground truncate">{m.name}</div>
+                      <div className="text-[10px] text-muted-foreground truncate mono">{m.tasksActive} active</div>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-[10px] text-muted-foreground/80 line-clamp-2 leading-snug">
+                    {m.tasks[0]}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
       </div>
     </OSLayout>
   );
 };
 
-export default Dashboard;
+function KPICard({
+  icon: Icon, label, value, suffix, footer, className,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string; value: string; suffix?: string; footer?: React.ReactNode; className?: string;
+}) {
+  return (
+    <div className={`glass-card rounded-xl p-5 ${className ?? ""}`}>
+      <div className="flex items-center justify-between text-[11px] mono uppercase tracking-wider text-muted-foreground">
+        <span className="flex items-center gap-2"><Icon className="h-3.5 w-3.5" /> {label}</span>
+      </div>
+      <div className="mt-3 flex items-baseline gap-1">
+        <div className="text-3xl font-semibold tracking-tight text-foreground">{value}</div>
+        {suffix && <div className="text-sm text-muted-foreground">{suffix}</div>}
+      </div>
+      {footer && <div className="mt-3">{footer}</div>}
+    </div>
+  );
+}
+
+function Delta({ value, suffix }: { value: number; suffix?: string }) {
+  const up = value >= 0;
+  const Icon = up ? ArrowUp : ArrowDown;
+  return (
+    <div className={`inline-flex items-center gap-1 text-[11px] mono ${up ? "text-success" : "text-destructive"}`}>
+      <Icon className="h-3 w-3" />
+      {Math.abs(value)}{suffix}
+    </div>
+  );
+}
+
+function HealthBar({ value }: { value: number }) {
+  return (
+    <div className="h-1.5 w-full rounded-full bg-surface-hover overflow-hidden">
+      <div className="h-full rounded-full gradient-accent" style={{ width: `${value}%` }} />
+    </div>
+  );
+}
+
+function Sparkline() {
+  const pts = [4, 7, 5, 9, 6, 11, 8, 12, 10, 14, 13, 17];
+  const max = Math.max(...pts);
+  const w = 120, h = 36;
+  const d = pts.map((p, i) => {
+    const x = (i / (pts.length - 1)) * w;
+    const y = h - (p / max) * h;
+    return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  return (
+    <svg width={w} height={h} className="overflow-visible">
+      <defs>
+        <linearGradient id="sl" x1="0" x2="1">
+          <stop offset="0%" stopColor="hsl(var(--electric))" />
+          <stop offset="100%" stopColor="hsl(var(--violet))" />
+        </linearGradient>
+      </defs>
+      <path d={d} fill="none" stroke="url(#sl)" strokeWidth={1.5} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export default Index;
