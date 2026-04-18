@@ -1,8 +1,9 @@
 import { OSLayout } from "@/components/os/OSLayout";
 import { ModelAvatar } from "@/components/os/ModelAvatar";
 import { StatusBadge } from "@/components/os/StatusBadge";
-import { departments, type Department, type DeptAgent } from "@/lib/workforce-data";
+import { type Department, type DeptAgent } from "@/lib/workforce-data";
 import { taskPipeline } from "@/lib/mock-data";
+import { useWorkforceStore } from "@/stores/workforce-store";
 import {
   Activity, Cpu, Megaphone, Search, Code2, Briefcase, Settings2,
   Wallet, Pause, Play, SlidersHorizontal,
@@ -18,6 +19,7 @@ const deptIcon = {
 } as const;
 
 const Workforce = () => {
+  const departments = useWorkforceStore((s) => s.departments);
   const allAgents = departments.flatMap((d) => d.agents);
   const activeCount = allAgents.filter((a) =>
     ["active", "running", "live", "processing"].includes(a.status),

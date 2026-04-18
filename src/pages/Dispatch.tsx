@@ -1,9 +1,9 @@
 import { OSLayout } from "@/components/os/OSLayout";
 import { ModelAvatar, modelAccent } from "@/components/os/ModelAvatar";
 import { StatusBadge } from "@/components/os/StatusBadge";
-import { aiModels } from "@/lib/mock-data";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowRight, Plus, Send, Sparkles, X, Check, Play, Loader2, Cpu } from "lucide-react";
+import { useWorkforceStore, inferDepartmentId } from "@/stores/workforce-store";
+import { ArrowRight, Plus, Send, Sparkles, X, Check, Play, Loader2, Cpu, AlertCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -13,9 +13,15 @@ interface Subtask {
   title: string;
   description: string;
   priority: "Critical" | "High" | "Medium" | "Low";
+  /** Display name of the assigned agent ("ChatGPT 5.2"). Empty string if unassigned. */
   agent: string;
+  /** Base model ("ChatGPT", "Claude", etc.) — used for the avatar. */
   model: string;
-  state: "proposed" | "accepted" | "running" | "done";
+  /** Concrete agent id from the workforce store. Empty if no idle agent was available. */
+  agentId: string;
+  /** Department the agent lives in. */
+  departmentId: string;
+  state: "proposed" | "accepted" | "running" | "done" | "unassigned";
   log?: string[];
 }
 
@@ -42,6 +48,41 @@ const Dispatch = () => {
   const [showManual, setShowManual] = useState(false);
   const autoRan = useRef(false);
 
+  const departments = useWorkforceStore((s) => s.departments);
+  const findIdleAgent = useWorkforceStore((s) => s.findIdleAgent);
+  const assignTask = useWorkforceStore((s) => s.assignTask);
+  const releaseAgent = useWorkforceStore((s) => s.releaseAgent);
+
+  /**
+   * Reserve an idle agent for a proposed subtask.
+   * We don't flip status to "running" yet — that happens on Execute.
+   * But we *do* preview which agent will handle it.
+   */
+  const reserveAgentForProposal = (
+    title: string,
+    description: string,
+    alreadyReservedIds: Set<string>,
+  ) => {
+    const deptHint = inferDepartmentId(`${title} ${description}`);
+    // Try preferred dept first
+    const tryDept = (deptId?: string) => {
+      const result = findIdleAgent(deptId);
+      if (result && !alreadyReservedIds.has(result.agent.id)) return result;
+      // If preferred returned an already-reserved agent, walk all depts manually
+      for (const d of departments) {
+        if (deptId && d.id !== deptId) continue;
+        const a = d.agents.find(
+          (x) =>
+            (x.status === "idle" || x.status === "paused") &&
+            !alreadyReservedIds.has(x.id),
+        );
+        if (a) return { agent: a, department: d };
+      }
+      return null;
+    };
+    return tryDept(deptHint) ?? tryDept(undefined);
+  };
+
   const breakdown = async (text: string) => {
     if (!text.trim()) return;
     setLoading(true);
@@ -51,15 +92,48 @@ const Dispatch = () => {
       });
       if (error) throw error;
       if ((data as any)?.error) throw new Error((data as any).error);
-      const incoming = ((data as any)?.subtasks ?? []) as Omit<Subtask, "id" | "state">[];
-      setSubtasks(
-        incoming.map((s, i) => ({
+      const incoming = ((data as any)?.subtasks ?? []) as Array<{
+        title: string;
+        description: string;
+        priority: Subtask["priority"];
+        agent: string;
+        model: string;
+      }>;
+
+      const reserved = new Set<string>();
+      const next: Subtask[] = incoming.map((s, i) => {
+        const reservation = reserveAgentForProposal(s.title, s.description, reserved);
+        if (reservation) {
+          reserved.add(reservation.agent.id);
+          return {
+            ...s,
+            id: `t-${Date.now()}-${i}`,
+            agent: reservation.agent.name,
+            model: reservation.agent.baseModel,
+            agentId: reservation.agent.id,
+            departmentId: reservation.department.id,
+            state: "proposed",
+          };
+        }
+        return {
           ...s,
           id: `t-${Date.now()}-${i}`,
-          state: "proposed",
-        })),
-      );
+          agent: "—",
+          model: s.model,
+          agentId: "",
+          departmentId: "",
+          state: "unassigned",
+        };
+      });
+
+      setSubtasks(next);
       if (!incoming.length) toast.message("No subtasks returned");
+      const unassignedCount = next.filter((s) => s.state === "unassigned").length;
+      if (unassignedCount > 0) {
+        toast.warning(
+          `${unassignedCount} subtask${unassignedCount === 1 ? "" : "s"} couldn't be auto-assigned — no idle agents available.`,
+        );
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Dispatch failed");
     } finally {
@@ -75,28 +149,46 @@ const Dispatch = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
+
   const accept = (id: string) =>
     setSubtasks((p) => p.map((s) => (s.id === id ? { ...s, state: "accepted" } : s)));
+
   const cancel = (id: string) => setSubtasks((p) => p.filter((s) => s.id !== id));
 
-  const acceptedAgents = useMemo(
-    () => new Set(subtasks.filter((s) => s.state !== "proposed").map((s) => s.agent)),
+  const acceptedAgentIds = useMemo(
+    () =>
+      new Set(
+        subtasks
+          .filter((s) => s.state !== "proposed" && s.state !== "unassigned")
+          .map((s) => s.agentId),
+      ),
     [subtasks],
   );
 
   const executeAll = async () => {
     if (executing) return;
-    const queue = subtasks.filter((s) => s.state === "accepted");
+    const queue = subtasks.filter((s) => s.state === "accepted" && s.agentId);
     if (!queue.length) {
       toast.message("Accept some subtasks first");
       return;
     }
     setExecuting(true);
     for (const t of queue) {
+      // Flip the workforce agent to "running"
+      const ok = assignTask(t.agentId, t.title);
+      if (!ok) {
+        setSubtasks((p) =>
+          p.map((s) =>
+            s.id === t.id
+              ? { ...s, log: [...(s.log ?? []), `agent ${t.agent} no longer idle — skipped`] }
+              : s,
+          ),
+        );
+        continue;
+      }
       setSubtasks((p) =>
         p.map((s) => (s.id === t.id ? { ...s, state: "running", log: ["dispatching…"] } : s)),
       );
-      // simulate streaming logs
       const steps = [
         `routing to ${t.agent}`,
         `model: ${t.model}`,
@@ -110,11 +202,22 @@ const Dispatch = () => {
           p.map((s) => (s.id === t.id ? { ...s, log: [...(s.log ?? []), step] } : s)),
         );
       }
+      // Release the agent back to idle
+      releaseAgent(t.agentId);
       setSubtasks((p) => p.map((s) => (s.id === t.id ? { ...s, state: "done" } : s)));
     }
     setExecuting(false);
     toast.success("All accepted subtasks executed");
   };
+
+  // Right-rail: flat list of all agents, sorted idle-last
+  const allAgents = useMemo(
+    () =>
+      departments.flatMap((d) =>
+        d.agents.map((a) => ({ ...a, departmentName: d.name })),
+      ),
+    [departments],
+  );
 
   return (
     <OSLayout>
@@ -127,7 +230,7 @@ const Dispatch = () => {
             What do you want to do today?
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Your request will be broken into prioritized subtasks and assigned to AI agents.
+            Your request will be broken into prioritized subtasks and routed to idle agents in your AI workforce.
           </p>
         </header>
 
@@ -193,13 +296,34 @@ const Dispatch = () => {
 
             {showManual && (
               <ManualForm
-                onAdd={(s) =>
+                onAdd={(s) => {
+                  // Try to find an idle agent in the chosen department
+                  const reserved = new Set(
+                    subtasks.filter((x) => x.agentId).map((x) => x.agentId),
+                  );
+                  const reservation = reserveProposalForManual(
+                    departments,
+                    s.departmentId,
+                    reserved,
+                  );
                   setSubtasks((p) => [
                     ...p,
-                    { ...s, id: `m-${Date.now()}`, state: "accepted" },
-                  ])
-                }
+                    {
+                      ...s,
+                      id: `m-${Date.now()}`,
+                      agent: reservation?.agent.name ?? "—",
+                      model: reservation?.agent.baseModel ?? s.model,
+                      agentId: reservation?.agent.id ?? "",
+                      departmentId: reservation?.department.id ?? s.departmentId,
+                      state: reservation ? "accepted" : "unassigned",
+                    },
+                  ]);
+                  if (!reservation) {
+                    toast.warning(`No idle agent in ${s.departmentId} — task left unassigned.`);
+                  }
+                }}
                 onClose={() => setShowManual(false)}
+                departments={departments}
               />
             )}
 
@@ -223,18 +347,26 @@ const Dispatch = () => {
                   className={`glass-card rounded-xl p-4 transition-all ${
                     t.state === "accepted" ? "ring-1 ring-electric/30" :
                     t.state === "running" ? "ring-1 ring-violet/40" :
-                    t.state === "done" ? "ring-1 ring-success/40 opacity-90" : ""
+                    t.state === "done" ? "ring-1 ring-success/40 opacity-90" :
+                    t.state === "unassigned" ? "ring-1 ring-warning/40" : ""
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 min-w-0 flex-1">
-                      <ModelAvatar name={t.agent} accent={modelAccent(t.agent)} size="md" />
+                      <ModelAvatar
+                        name={t.model || t.agent}
+                        accent={modelAccent(t.model || t.agent)}
+                        size="md"
+                      />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={`text-[10px] mono uppercase tracking-wider px-1.5 py-0.5 rounded border ${priorityClass[t.priority]}`}>
                             {t.priority}
                           </span>
-                          <span className="text-[10px] mono text-muted-foreground">{t.agent} · {t.model}</span>
+                          <span className="text-[10px] mono text-muted-foreground">
+                            {t.agent}
+                            {t.departmentId && ` · ${t.departmentId}`}
+                          </span>
                           {t.state === "running" && (
                             <span className="text-[10px] mono text-violet flex items-center gap-1">
                               <span className="pulse-dot bg-violet" /> processing
@@ -243,6 +375,11 @@ const Dispatch = () => {
                           {t.state === "done" && (
                             <span className="text-[10px] mono text-success flex items-center gap-1">
                               <Check className="h-3 w-3" /> done
+                            </span>
+                          )}
+                          {t.state === "unassigned" && (
+                            <span className="text-[10px] mono text-warning flex items-center gap-1">
+                              <AlertCircle className="h-3 w-3" /> no idle agent
                             </span>
                           )}
                         </div>
@@ -272,21 +409,30 @@ const Dispatch = () => {
                         </button>
                       </div>
                     )}
+                    {t.state === "unassigned" && (
+                      <button
+                        onClick={() => cancel(t.id)}
+                        className="h-7 w-7 grid place-items-center rounded-md text-muted-foreground hover:text-destructive hover:bg-surface-hover transition-colors shrink-0"
+                        aria-label="Cancel"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
                 </li>
               ))}
             </ul>
           </section>
 
-          {/* Right rail: agent status */}
+          {/* Right rail: live agent status from the workforce store */}
           <aside className="col-span-12 lg:col-span-4">
-            <div className="glass-card rounded-xl p-4 sticky top-16">
+            <div className="glass-card rounded-xl p-4 sticky top-16 max-h-[calc(100vh-5rem)] overflow-y-auto">
               <div className="flex items-center gap-2 text-[11px] mono uppercase tracking-wider text-muted-foreground mb-3">
-                <Cpu className="h-3.5 w-3.5" /> Agent status
+                <Cpu className="h-3.5 w-3.5" /> Workforce status
               </div>
-              <ul className="space-y-2">
-                {aiModels.map((m) => {
-                  const assigned = acceptedAgents.has(m.name);
+              <ul className="space-y-1.5">
+                {allAgents.map((m) => {
+                  const assigned = acceptedAgentIds.has(m.id);
                   return (
                     <li
                       key={m.id}
@@ -294,10 +440,14 @@ const Dispatch = () => {
                         assigned ? "border-electric/40 bg-electric/5" : "border-border bg-surface/60"
                       }`}
                     >
-                      <ModelAvatar name={m.name} accent={m.accent} size="sm" />
+                      <ModelAvatar name={m.baseModel} accent={m.accent} size="sm" />
                       <div className="min-w-0 flex-1">
-                        <div className="text-xs font-medium text-foreground truncate">{m.name}</div>
-                        <div className="text-[10px] text-muted-foreground truncate">{m.tasks[0]}</div>
+                        <div className="text-xs font-medium text-foreground truncate">
+                          {m.baseModel} <span className="text-muted-foreground font-normal">· {m.version}</span>
+                        </div>
+                        <div className="text-[10px] text-muted-foreground truncate">
+                          {m.departmentName} · {m.currentTask}
+                        </div>
                       </div>
                       <StatusBadge status={m.status} />
                     </li>
@@ -312,26 +462,40 @@ const Dispatch = () => {
   );
 };
 
+/** Manual-add helper: find an idle agent in the chosen department, ignoring already-reserved ids. */
+function reserveProposalForManual(
+  departments: ReturnType<typeof useWorkforceStore.getState>["departments"],
+  departmentId: string,
+  reservedIds: Set<string>,
+) {
+  const dept = departments.find((d) => d.id === departmentId);
+  if (!dept) return null;
+  const a = dept.agents.find(
+    (x) => (x.status === "idle" || x.status === "paused") && !reservedIds.has(x.id),
+  );
+  return a ? { agent: a, department: dept } : null;
+}
+
 function ManualForm({
   onAdd,
   onClose,
+  departments,
 }: {
-  onAdd: (s: Omit<Subtask, "id" | "state">) => void;
+  onAdd: (s: {
+    title: string;
+    description: string;
+    priority: Subtask["priority"];
+    departmentId: string;
+    /** fallback model label if no agent is available */
+    model: string;
+  }) => void;
   onClose: () => void;
+  departments: ReturnType<typeof useWorkforceStore.getState>["departments"];
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Subtask["priority"]>("Medium");
-  const [agent, setAgent] = useState("ChatGPT-5");
-
-  const modelMap: Record<string, string> = {
-    "ChatGPT-5": "gpt-5",
-    "Gemini": "gemini-2.5-pro",
-    "Claude": "claude-sonnet-4-6",
-    "Llama": "llama",
-    "Perplexity": "perplexity",
-    "Cursor Agent": "cursor",
-  };
+  const [departmentId, setDepartmentId] = useState(departments[0]?.id ?? "marketing");
 
   return (
     <div className="glass-card rounded-xl p-4 space-y-3 animate-fade-in">
@@ -351,11 +515,13 @@ function ManualForm({
             {["Critical", "High", "Medium", "Low"].map((p) => <option key={p}>{p}</option>)}
           </select>
           <select
-            value={agent}
-            onChange={(e) => setAgent(e.target.value)}
+            value={departmentId}
+            onChange={(e) => setDepartmentId(e.target.value)}
             className="flex-1 rounded-md border border-border bg-surface px-3 py-2 text-sm text-foreground focus:outline-none"
           >
-            {Object.keys(modelMap).map((a) => <option key={a}>{a}</option>)}
+            {departments.map((d) => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
           </select>
         </div>
       </div>
@@ -376,7 +542,7 @@ function ManualForm({
         <button
           onClick={() => {
             if (!title.trim()) return;
-            onAdd({ title, description, priority, agent, model: modelMap[agent] });
+            onAdd({ title, description, priority, departmentId, model: "auto" });
             onClose();
           }}
           className="h-8 px-3 rounded-md text-xs gradient-accent text-accent-foreground font-medium hover:opacity-90 transition-opacity"
