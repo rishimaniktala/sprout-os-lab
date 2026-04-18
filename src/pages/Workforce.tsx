@@ -1,10 +1,29 @@
 import { OSLayout } from "@/components/os/OSLayout";
 import { ModelAvatar } from "@/components/os/ModelAvatar";
 import { StatusBadge } from "@/components/os/StatusBadge";
-import { aiModels, taskPipeline } from "@/lib/mock-data";
-import { Activity, Cpu, Gauge, Pause, Play, Settings2, Zap } from "lucide-react";
+import { departments, type Department, type DeptAgent } from "@/lib/workforce-data";
+import { taskPipeline } from "@/lib/mock-data";
+import {
+  Activity, Cpu, Megaphone, Search, Code2, Briefcase, Settings2,
+  Wallet, Pause, Play, SlidersHorizontal,
+} from "lucide-react";
+
+const deptIcon = {
+  marketing:   Megaphone,
+  research:    Search,
+  engineering: Code2,
+  sales:       Briefcase,
+  ops:         Settings2,
+  finance:     Wallet,
+} as const;
 
 const Workforce = () => {
+  const allAgents = departments.flatMap((d) => d.agents);
+  const activeCount = allAgents.filter((a) =>
+    ["active", "running", "live", "processing"].includes(a.status),
+  ).length;
+  const totalSpend = allAgents.reduce((s, a) => s + a.costToday, 0);
+
   return (
     <OSLayout>
       <div className="px-6 py-8 max-w-[1400px] mx-auto animate-fade-in">
@@ -17,58 +36,19 @@ const Workforce = () => {
               AI Workforce
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Real models routed by cost, speed, and capability. Multi-model orchestration is on.
+              Agents organized by department. Multiple models — and multiple versions of the same model — work side by side.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Stat label="Active models" value={`${aiModels.filter(m => m.status === "active" || m.status === "running" || m.status === "live" || m.status === "processing").length}/${aiModels.length}`} />
-            <Stat label="Tasks / hr" value="142" />
-            <Stat label="Spend / hr" value="€2.18" />
+            <Stat label="Active agents" value={`${activeCount}/${allAgents.length}`} />
+            <Stat label="Departments" value={`${departments.length}`} />
+            <Stat label="Spend today" value={`€${totalSpend.toFixed(2)}`} />
           </div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {aiModels.map((m) => (
-            <div key={m.id} className="glass-card rounded-xl p-5 hover:border-strong transition-colors group">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <ModelAvatar name={m.name} accent={m.accent} size="lg" />
-                  <div>
-                    <div className="text-sm font-semibold text-foreground tracking-tight">{m.name}</div>
-                    <div className="text-[11px] text-muted-foreground mono">{m.vendor}</div>
-                  </div>
-                </div>
-                <StatusBadge status={m.status} />
-              </div>
-
-              <p className="mt-3 text-xs text-muted-foreground">{m.role}</p>
-
-              <ul className="mt-4 space-y-1.5">
-                {m.tasks.map((t, i) => (
-                  <li key={i} className="flex items-start gap-2 text-[12px] text-foreground/90">
-                    <span className="mt-1.5 h-1 w-1 rounded-full bg-electric shrink-0" />
-                    <span className="leading-relaxed">{t}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                <Mini label="Active" value={m.tasksActive} />
-                <Mini label="Success" value={`${m.successRate}%`} />
-                <Mini label="Cost / task" value={`€${m.costPerTask.toFixed(3)}`} />
-              </div>
-
-              <div className="mt-4 flex items-center justify-between">
-                <span className="text-[10px] mono uppercase tracking-wider text-muted-foreground">
-                  €{m.costToday.toFixed(2)} today
-                </span>
-                <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
-                  <button className="h-7 w-7 grid place-items-center rounded-md hover:bg-surface-hover text-muted-foreground hover:text-foreground" title="Pause"><Pause className="h-3.5 w-3.5" /></button>
-                  <button className="h-7 w-7 grid place-items-center rounded-md hover:bg-surface-hover text-muted-foreground hover:text-foreground" title="Run"><Play className="h-3.5 w-3.5" /></button>
-                  <button className="h-7 w-7 grid place-items-center rounded-md hover:bg-surface-hover text-muted-foreground hover:text-foreground" title="Configure"><Settings2 className="h-3.5 w-3.5" /></button>
-                </div>
-              </div>
-            </div>
+        <div className="space-y-6">
+          {departments.map((dept) => (
+            <DepartmentSection key={dept.id} dept={dept} />
           ))}
         </div>
 
@@ -92,6 +72,85 @@ const Workforce = () => {
   );
 };
 
+function DepartmentSection({ dept }: { dept: Department }) {
+  const Icon = deptIcon[dept.icon];
+  const activeAgents = dept.agents.filter((a) =>
+    ["active", "running", "live", "processing"].includes(a.status),
+  ).length;
+
+  return (
+    <section className="glass-card rounded-xl p-5">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          <div className={`h-9 w-9 rounded-lg grid place-items-center ring-1 bg-${dept.accent}/10 ring-${dept.accent}/30`}>
+            <Icon className={`h-4 w-4 text-${dept.accent}`} />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold tracking-tight text-foreground">{dept.name}</h2>
+            <p className="text-[11px] text-muted-foreground">{dept.tagline}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] mono uppercase tracking-wider text-muted-foreground">
+            {activeAgents}/{dept.agents.length} active
+          </span>
+          <button className="h-7 px-2 grid place-items-center rounded-md hover:bg-surface-hover text-muted-foreground hover:text-foreground" title="Configure department">
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        {dept.agents.map((a) => (
+          <AgentCard key={a.id} agent={a} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function AgentCard({ agent: a }: { agent: DeptAgent }) {
+  return (
+    <div className="rounded-lg border border-border/60 bg-surface/40 p-4 hover:border-strong transition-colors group">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <ModelAvatar name={a.baseModel} accent={a.accent} size="md" />
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-foreground tracking-tight truncate">
+              {a.baseModel} <span className="text-muted-foreground font-normal">· {a.version}</span>
+            </div>
+            <div className="text-[10px] text-muted-foreground mono truncate">{a.vendor}</div>
+          </div>
+        </div>
+        <StatusBadge status={a.status} />
+      </div>
+
+      <p className="mt-2.5 text-[12px] text-muted-foreground leading-relaxed">{a.role}</p>
+
+      <div className="mt-3 rounded-md border border-border/40 bg-surface/60 px-2.5 py-2">
+        <div className="text-[9px] mono uppercase tracking-wider text-muted-foreground">Current task</div>
+        <div className="text-[12px] text-foreground/90 leading-snug mt-0.5">{a.currentTask}</div>
+      </div>
+
+      <div className="mt-3 grid grid-cols-3 gap-1.5">
+        <Mini label="Active" value={a.tasksActive} />
+        <Mini label="Success" value={`${a.successRate}%`} />
+        <Mini label="€/task" value={a.costPerTask < 0.01 ? a.costPerTask.toFixed(4) : a.costPerTask.toFixed(3)} />
+      </div>
+
+      <div className="mt-3 flex items-center justify-between">
+        <span className="text-[10px] mono uppercase tracking-wider text-muted-foreground">
+          €{a.costToday.toFixed(2)} today
+        </span>
+        <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+          <button className="h-6 w-6 grid place-items-center rounded-md hover:bg-surface-hover text-muted-foreground hover:text-foreground" title="Pause"><Pause className="h-3 w-3" /></button>
+          <button className="h-6 w-6 grid place-items-center rounded-md hover:bg-surface-hover text-muted-foreground hover:text-foreground" title="Run"><Play className="h-3 w-3" /></button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md border border-border bg-surface px-3 py-1.5">
@@ -103,7 +162,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function Mini({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-md border border-border/60 bg-surface/60 px-2 py-1.5">
+    <div className="rounded-md border border-border/60 bg-surface/60 px-2 py-1">
       <div className="text-[9px] mono uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className="text-xs font-semibold text-foreground mono">{value}</div>
     </div>
