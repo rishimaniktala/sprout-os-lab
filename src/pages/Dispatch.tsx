@@ -4,7 +4,8 @@ import { StatusBadge } from "@/components/os/StatusBadge";
 import { aiModels } from "@/lib/mock-data";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight, Plus, Send, Sparkles, X, Check, Play, Loader2, Cpu } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 interface Subtask {
@@ -33,11 +34,13 @@ const promptChips = [
 ];
 
 const Dispatch = () => {
-  const [prompt, setPrompt] = useState("");
+  const [params] = useSearchParams();
+  const [prompt, setPrompt] = useState(params.get("q") ?? "");
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [loading, setLoading] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [showManual, setShowManual] = useState(false);
+  const autoRan = useRef(false);
 
   const breakdown = async (text: string) => {
     if (!text.trim()) return;
