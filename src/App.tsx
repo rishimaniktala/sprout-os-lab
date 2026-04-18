@@ -7,7 +7,7 @@ import Index from "./pages/Index.tsx";
 import Workforce from "./pages/Workforce.tsx";
 import Dispatch from "./pages/Dispatch.tsx";
 import Memory from "./pages/Memory.tsx";
-import Growth from "./pages/Growth.tsx";
+
 import Signal from "./pages/Signal.tsx";
 import Command from "./pages/Command.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -25,7 +25,7 @@ const App = () => (
           <Route path="/workforce" element={<Workforce />} />
           <Route path="/dispatch" element={<Dispatch />} />
           <Route path="/memory" element={<Memory />} />
-          <Route path="/growth" element={<Growth />} />
+          
           <Route path="/signal" element={<Signal />} />
           <Route path="/command" element={<Command />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
