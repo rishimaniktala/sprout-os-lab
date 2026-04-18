@@ -67,6 +67,14 @@ const Dispatch = () => {
     }
   };
 
+  useEffect(() => {
+    const q = params.get("q");
+    if (q && !autoRan.current) {
+      autoRan.current = true;
+      breakdown(q);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
   const accept = (id: string) =>
     setSubtasks((p) => p.map((s) => (s.id === id ? { ...s, state: "accepted" } : s)));
   const cancel = (id: string) => setSubtasks((p) => p.filter((s) => s.id !== id));
