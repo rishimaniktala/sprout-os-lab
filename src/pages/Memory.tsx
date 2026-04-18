@@ -70,18 +70,20 @@ const Memory = () => {
       const tpl = liveTemplates[Math.floor(Math.random() * liveTemplates.length)];
       const id = `f-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       setFeed((prev) => [{ id, agent: tpl.agent, verb: tpl.verb, text: tpl.text, ts: Date.now() }, ...prev].slice(0, 10));
-      setItems((prev) => [
-        {
+      setItems((prev) => {
+        const priority: MemoryItem["priority"] =
+          tpl.layer === "high" ? "high" : tpl.layer === "medium" ? "medium" : "low";
+        const next: MemoryItem = {
           id,
           layer: tpl.layer,
           content: tpl.text,
           source: tpl.agent,
           timestamp: "now",
-          priority: tpl.layer === "high" ? "high" : tpl.layer === "medium" ? "medium" : "low",
+          priority,
           tab: tpl.target,
-        },
-        ...prev,
-      ].slice(0, 60));
+        };
+        return [next, ...prev].slice(0, 60);
+      });
     }, 3200);
     return () => clearInterval(t);
   }, []);
