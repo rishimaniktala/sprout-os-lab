@@ -11,10 +11,12 @@ const accentMap: Record<string, { bg: string; ring: string; text: string }> = {
 
 const initials: Record<string, string> = {
   "ChatGPT-5": "G5",
+  "ChatGPT": "GP",
   "Gemini": "Ge",
   "Claude": "Cl",
   "Llama": "Ll",
   "Perplexity": "Px",
+  "Cursor": "Cs",
   "Cursor Agent": "Cs",
 };
 
