@@ -1,0 +1,98 @@
+import { NavLink } from "@/components/NavLink";
+import { Activity, LayoutGrid, Inbox, Bot, Sparkles, Settings } from "lucide-react";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@/components/ui/sidebar";
+
+const nav = [
+  { title: "Dashboard", url: "/", icon: LayoutGrid },
+  { title: "Agents", url: "/agents", icon: Bot },
+  { title: "Projects", url: "/projects", icon: Activity },
+  { title: "Inbox", url: "/inbox", icon: Inbox },
+  { title: "Copilot", url: "/copilot", icon: Sparkles },
+];
+
+export function AppSidebar() {
+  const { state } = useSidebar();
+  const collapsed = state === "collapsed";
+
+  return (
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+      <SidebarHeader className="px-3 py-4">
+        <div className="flex items-center gap-2.5">
+          <div className="relative h-8 w-8 shrink-0 rounded-md gradient-accent grid place-items-center shadow-md">
+            <span className="text-[13px] font-bold text-accent-foreground">A</span>
+            <span className="absolute -inset-px rounded-md ring-1 ring-white/10" />
+          </div>
+          {!collapsed && (
+            <div className="leading-tight">
+              <div className="text-sm font-semibold text-foreground tracking-tight">AgentOS</div>
+              <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground mono">v0.4 · prod</div>
+            </div>
+          )}
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent className="px-2">
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70 mono">
+            Workspace
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {nav.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild className="h-9">
+                    <NavLink
+                      to={item.url}
+                      end={item.url === "/"}
+                      className="flex items-center gap-2.5 rounded-md px-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      activeClassName="bg-sidebar-accent text-foreground font-medium"
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="px-2 pb-3">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton className="h-9">
+              <Settings className="h-4 w-4" />
+              {!collapsed && <span className="text-sm">Settings</span>}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        {!collapsed && (
+          <div className="mt-2 rounded-md border border-sidebar-border bg-sidebar-accent/40 px-2.5 py-2">
+            <div className="flex items-center gap-2">
+              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-accent to-accent-glow grid place-items-center text-[11px] font-semibold text-accent-foreground">
+                JK
+              </div>
+              <div className="leading-tight min-w-0">
+                <div className="text-xs font-medium text-foreground truncate">Jordan Kim</div>
+                <div className="text-[10px] text-muted-foreground truncate">CEO · AgentOS Inc.</div>
+              </div>
+            </div>
+          </div>
+        )}
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
