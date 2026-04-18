@@ -8,6 +8,7 @@ import {
   CheckCircle2, Clock, ArrowRight, TrendingUp,
 } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const fmtEur = (n: number) => `€${n.toLocaleString("en-GB")}`;
 
@@ -24,6 +25,11 @@ const toneClass = {
 
 const Index = () => {
   const [prompt, setPrompt] = useState("");
+  const navigate = useNavigate();
+  const dispatch = (text: string) => {
+    if (!text.trim()) return;
+    navigate(`/dispatch?q=${encodeURIComponent(text)}`);
+  };
 
   return (
     <OSLayout>
@@ -46,15 +52,15 @@ const Index = () => {
           </p>
 
           {/* Prompt */}
-          <form onSubmit={(e) => e.preventDefault()} className="mt-6 relative max-w-3xl">
+          <form onSubmit={(e) => { e.preventDefault(); dispatch(prompt); }} className="mt-6 relative max-w-3xl">
             <div className="glass-card-strong rounded-xl p-1.5 flex items-center gap-2">
               <input
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="What should the AI team research today?"
+                placeholder="What should the AI team execute today?"
                 className="flex-1 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
               />
-              <button className="h-9 px-3 rounded-lg gradient-accent text-accent-foreground text-xs font-medium flex items-center gap-1.5 hover:opacity-90 transition-opacity">
+              <button type="submit" className="h-9 px-3 rounded-lg gradient-accent text-accent-foreground text-xs font-medium flex items-center gap-1.5 hover:opacity-90 transition-opacity">
                 Dispatch <ArrowRight className="h-3.5 w-3.5" />
               </button>
             </div>
