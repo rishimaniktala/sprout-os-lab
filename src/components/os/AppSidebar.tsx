@@ -1,5 +1,5 @@
 import { NavLink } from "@/components/NavLink";
-import { Activity, LayoutGrid, Inbox, Bot, Sparkles, Settings } from "lucide-react";
+import { LayoutDashboard, Bot, CalendarClock, Briefcase, Brain, MessageSquare, Settings } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -15,11 +15,12 @@ import {
 } from "@/components/ui/sidebar";
 
 const nav = [
-  { title: "Dashboard", url: "/", icon: LayoutGrid },
-  { title: "Agents", url: "/agents", icon: Bot },
-  { title: "Projects", url: "/projects", icon: Activity },
-  { title: "Inbox", url: "/inbox", icon: Inbox },
-  { title: "Copilot", url: "/copilot", icon: Sparkles },
+  { title: "Dashboard",   url: "/",          icon: LayoutDashboard },
+  { title: "AI Workforce", url: "/workforce", icon: Bot },
+  { title: "Meetings",    url: "/meetings",  icon: CalendarClock },
+  { title: "Portfolio",   url: "/portfolio", icon: Briefcase },
+  { title: "Memory",      url: "/memory",    icon: Brain },
+  { title: "Chat",        url: "/chat",      icon: MessageSquare },
 ];
 
 export function AppSidebar() {
@@ -30,14 +31,14 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="px-3 py-4">
         <div className="flex items-center gap-2.5">
-          <div className="relative h-8 w-8 shrink-0 rounded-md gradient-accent grid place-items-center shadow-md">
-            <span className="text-[13px] font-bold text-accent-foreground">A</span>
-            <span className="absolute -inset-px rounded-md ring-1 ring-white/10" />
+          <div className="relative h-8 w-8 shrink-0 rounded-lg gradient-accent grid place-items-center shadow-md">
+            <span className="text-[15px] font-bold text-accent-foreground leading-none tracking-tighter">…</span>
+            <span className="absolute -inset-px rounded-lg ring-1 ring-white/10" />
           </div>
           {!collapsed && (
             <div className="leading-tight">
-              <div className="text-sm font-semibold text-foreground tracking-tight">AgentOS</div>
-              <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground mono">v0.4 · prod</div>
+              <div className="text-sm font-semibold text-foreground tracking-tight">EllipsisOS</div>
+              <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground mono">v1.0 · founder</div>
             </div>
           )}
         </div>
@@ -45,7 +46,7 @@ export function AppSidebar() {
 
       <SidebarContent className="px-2">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70 mono">
+          <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70 mono">
             Workspace
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -80,14 +81,14 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
         {!collapsed && (
-          <div className="mt-2 rounded-md border border-sidebar-border bg-sidebar-accent/40 px-2.5 py-2">
+          <div className="mt-2 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-2.5 py-2">
             <div className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-full bg-gradient-to-br from-accent to-accent-glow grid place-items-center text-[11px] font-semibold text-accent-foreground">
-                JK
+              <div className="h-7 w-7 rounded-full gradient-accent grid place-items-center text-[11px] font-semibold text-accent-foreground">
+                AK
               </div>
               <div className="leading-tight min-w-0">
-                <div className="text-xs font-medium text-foreground truncate">Jordan Kim</div>
-                <div className="text-[10px] text-muted-foreground truncate">CEO · AgentOS Inc.</div>
+                <div className="text-xs font-medium text-foreground truncate">Alex Kim</div>
+                <div className="text-[10px] text-muted-foreground truncate">Founder · Northwind AI</div>
               </div>
             </div>
           </div>
