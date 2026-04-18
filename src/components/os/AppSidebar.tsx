@@ -1,26 +1,21 @@
 import { NavLink } from "@/components/NavLink";
-import { LayoutDashboard, Bot, CalendarClock, Briefcase, Brain, MessageSquare, Settings } from "lucide-react";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
+  LayoutDashboard, Bot, Send, Brain, TrendingUp, Radio, Terminal, Settings,
+} from "lucide-react";
+import {
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
+  SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 
 const nav = [
-  { title: "Dashboard",   url: "/",          icon: LayoutDashboard },
-  { title: "AI Workforce", url: "/workforce", icon: Bot },
-  { title: "Meetings",    url: "/meetings",  icon: CalendarClock },
-  { title: "Portfolio",   url: "/portfolio", icon: Briefcase },
-  { title: "Memory",      url: "/memory",    icon: Brain },
-  { title: "Chat",        url: "/chat",      icon: MessageSquare },
+  { title: "Dashboard",      url: "/",          icon: LayoutDashboard },
+  { title: "AI Workforce",   url: "/workforce", icon: Bot },
+  { title: "Dispatch",       url: "/dispatch",  icon: Send },
+  { title: "Memory",         url: "/memory",    icon: Brain },
+  { title: "Growth Engine",  url: "/growth",    icon: TrendingUp },
+  { title: "Signal Engine",  url: "/signal",    icon: Radio },
+  { title: "Command Center", url: "/command",   icon: Terminal },
 ];
 
 export function AppSidebar() {
@@ -32,12 +27,12 @@ export function AppSidebar() {
       <SidebarHeader className="px-3 py-4">
         <div className="flex items-center gap-2.5">
           <div className="relative h-8 w-8 shrink-0 rounded-lg gradient-accent grid place-items-center shadow-md">
-            <span className="text-[15px] font-bold text-accent-foreground leading-none tracking-tighter">…</span>
+            <span className="text-[15px] font-bold text-accent-foreground leading-none tracking-tighter">A</span>
             <span className="absolute -inset-px rounded-lg ring-1 ring-white/10" />
           </div>
           {!collapsed && (
             <div className="leading-tight">
-              <div className="text-sm font-semibold text-foreground tracking-tight">EllipsisOS</div>
+              <div className="text-sm font-semibold text-foreground tracking-tight">AgentOS</div>
               <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground mono">v1.0 · founder</div>
             </div>
           )}
@@ -47,7 +42,7 @@ export function AppSidebar() {
       <SidebarContent className="px-2">
         <SidebarGroup>
           <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70 mono">
-            Workspace
+            System
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
